@@ -2,6 +2,7 @@ import { type LinksFunction } from '@remix-run/node'
 import { LiveReload, Scripts, Links } from '@remix-run/react'
 import faviconAssetUrl from './assets/favicon.svg'
 import fontStylesheetUrl from './styles/font.css'
+import tailwindStylesheetUrl from './styles/tailwind.css'
 
 export const links: LinksFunction = () => {
 	return [
@@ -14,6 +15,10 @@ export const links: LinksFunction = () => {
 			rel: 'stylesheet',
 			href: fontStylesheetUrl,
 		},
+		{
+			rel: 'stylesheet',
+			href: tailwindStylesheetUrl,
+		},
 	]
 }
 
@@ -24,7 +29,7 @@ export default function App() {
 				<Links />
 			</head>
 			<body>
-				<p>Hello World</p>
+				<p className="p-8 text-xl">Hello World</p>
 				<Scripts />
 				<LiveReload />
 			</body>
