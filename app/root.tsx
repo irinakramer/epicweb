@@ -1,3 +1,4 @@
+import { cssBundleHref } from '@remix-run/css-bundle'
 import { type LinksFunction } from '@remix-run/node'
 import { LiveReload, Scripts, Links } from '@remix-run/react'
 import faviconAssetUrl from './assets/favicon.svg'
@@ -19,7 +20,8 @@ export const links: LinksFunction = () => {
 			rel: 'stylesheet',
 			href: tailwindStylesheetUrl,
 		},
-	]
+		cssBundleHref ? { rel: 'stylesheet', href: cssBundleHref } : null,
+	].filter(Boolean)
 }
 
 export default function App() {
