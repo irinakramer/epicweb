@@ -5,10 +5,12 @@ import {
 	Link,
 	Links,
 	LiveReload,
+	Meta,
 	Outlet,
 	Scripts,
 	ScrollRestoration,
 	useLoaderData,
+	type MetaFunction,
 } from '@remix-run/react'
 import faviconAssetUrl from './assets/favicon.svg'
 import fontStylesheetUrl from './styles/font.css'
@@ -44,6 +46,9 @@ export default function App() {
 	return (
 		<html lang="en" className="h-full overflow-x-hidden">
 			<head>
+				<meta charSet="utf-8" />
+				<meta name="viewport" content="width=device-width,initial-scale=1" />
+				<Meta />
 				<Links />
 			</head>
 			<body className="flex h-full flex-col justify-between bg-background text-foreground">
@@ -82,4 +87,11 @@ export default function App() {
 			</body>
 		</html>
 	)
+}
+
+export const meta: MetaFunction = () => {
+	return [
+		{ title: 'Epic Notes' },
+		{ name: 'description', content: `Your own captain's log` },
+	]
 }
