@@ -52,6 +52,7 @@ export default function NotesRoute() {
 									<NavLink
 										preventScrollReset
 										to={note.id}
+										prefetch="intent"
 										className={({ isActive }) =>
 											cn(navLinkDefaultClassName, isActive && 'bg-accent')
 										}
