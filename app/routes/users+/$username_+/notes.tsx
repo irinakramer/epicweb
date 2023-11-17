@@ -1,7 +1,7 @@
 import { json, type DataFunctionArgs } from '@remix-run/node'
 import { Link, NavLink, Outlet, useLoaderData } from '@remix-run/react'
 import { db } from '#app/utils/db.server.ts'
-import { cn } from '#app/utils/misc.tsx'
+import { cn, invariantResponse } from '#app/utils/misc.tsx'
 
 export async function loader({ params }: DataFunctionArgs) {
 	const owner = db.user.findFirst({
@@ -18,6 +18,8 @@ export async function loader({ params }: DataFunctionArgs) {
 			},
 		})
 		.map(({ id, title }) => ({ id, title }))
+
+	invariantResponse(owner, 'Oner not found', { status: 404 })
 
 	return json({
 		owner,

@@ -1,6 +1,7 @@
 import { json, type DataFunctionArgs } from '@remix-run/node'
 import { useLoaderData } from '@remix-run/react'
 import { db } from '#app/utils/db.server.ts'
+import { invariantResponse } from '#app/utils/misc.tsx'
 
 export async function loader({ params }: DataFunctionArgs) {
 	const note = db.note.findFirst({
@@ -8,6 +9,8 @@ export async function loader({ params }: DataFunctionArgs) {
 			id: { equals: params.noteId },
 		},
 	})
+
+	invariantResponse(note, 'Note not found', { status: 404 })
 
 	return json({ note: { title: note.title, content: note.content } })
 }
