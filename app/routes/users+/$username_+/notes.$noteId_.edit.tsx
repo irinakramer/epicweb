@@ -1,4 +1,4 @@
-import { json, type DataFunctionArgs } from '@remix-run/node'
+import { json, redirect, type DataFunctionArgs } from '@remix-run/node'
 import { Form, useLoaderData } from '@remix-run/react'
 import { floatingToolbarClassName } from '#app/components/floating-toolbar.tsx'
 import { Button } from '#app/components/ui/button.tsx'
@@ -24,28 +24,42 @@ export async function loader({ params }: DataFunctionArgs) {
 	})
 }
 
+export async function action({ request, params }: DataFunctionArgs) {
+	const formData = await request.formData()
+	const title = formData.get('title')
+	const content = formData.get('content')
+
+	db.note.update({
+		where: { id: { equals: params.noteId } },
+		// @ts-expect-error 🦺 we'll fix this next...
+		data: { title, content },
+	})
+
+	return redirect(`/users/${params.username}/notes/${params.noteId}`)
+}
+
 export default function NoteEdit() {
 	const data = useLoaderData<typeof loader>()
 
 	return (
 		<Form
-			method="POST"
+			method="post"
 			className="flex h-full flex-col gap-y-4 overflow-x-hidden px-10 pb-28 pt-12"
 		>
 			<div className="flex flex-col gap-1">
 				<div>
 					<Label>Title</Label>
-					<Input defaultValue={data.note.title} />
+					<Input name="title" defaultValue={data.note.title} />
 				</div>
 				<div>
 					<Label>Content</Label>
-					<Textarea defaultValue={data.note.content} />
+					<Textarea name="content" defaultValue={data.note.content} />
 				</div>
 				<div className={floatingToolbarClassName}>
-					<Button type="submit">Submit</Button>
 					<Button variant="destructive" type="reset">
 						Reset
 					</Button>
+					<Button type="submit">Submit</Button>
 				</div>
 			</div>
 		</Form>
