@@ -1,5 +1,10 @@
 import { json, type DataFunctionArgs } from '@remix-run/node'
-import { useLoaderData } from '@remix-run/react'
+import { Form, useLoaderData } from '@remix-run/react'
+import { floatingToolbarClassName } from '#app/components/floating-toolbar.tsx'
+import { Button } from '#app/components/ui/button.tsx'
+import { Input } from '#app/components/ui/input.tsx'
+import { Label } from '#app/components/ui/label.tsx'
+import { Textarea } from '#app/components/ui/textarea.tsx'
 import { db } from '#app/utils/db.server.ts'
 import { invariantResponse } from '#app/utils/misc.tsx'
 
@@ -22,5 +27,27 @@ export async function loader({ params }: DataFunctionArgs) {
 export default function NoteEdit() {
 	const data = useLoaderData<typeof loader>()
 
-	return <pre>{JSON.stringify(data, null, 2)}</pre>
+	return (
+		<Form
+			method="POST"
+			className="flex h-full flex-col gap-y-4 overflow-x-hidden px-10 pb-28 pt-12"
+		>
+			<div className="flex flex-col gap-1">
+				<div>
+					<Label>Title</Label>
+					<Input defaultValue={data.note.title} />
+				</div>
+				<div>
+					<Label>Content</Label>
+					<Textarea defaultValue={data.note.content} />
+				</div>
+				<div className={floatingToolbarClassName}>
+					<Button type="submit">Submit</Button>
+					<Button variant="destructive" type="reset">
+						Reset
+					</Button>
+				</div>
+			</div>
+		</Form>
+	)
 }
