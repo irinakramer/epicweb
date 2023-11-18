@@ -2,7 +2,9 @@ import { json, type DataFunctionArgs } from '@remix-run/node'
 import {
 	Link,
 	useLoaderData,
+	isRouteErrorResponse,
 	useRouteError,
+	useParams,
 	type MetaFunction,
 } from '@remix-run/react'
 import { db } from '#app/utils/db.server.ts'
@@ -48,11 +50,18 @@ export const meta: MetaFunction<typeof loader> = ({ data, params }) => {
 
 export function ErrorBoundary() {
 	const error = useRouteError()
+	const params = useParams()
 	console.error(error)
+
+	let errorMessage = <p>Oh no, something went wrong. Sorry about that.</p>
+
+	if (isRouteErrorResponse(error) && error.status === 404) {
+		errorMessage = <p>No user with the username "{params.username}" exists</p>
+	}
 
 	return (
 		<div className="container mx-auto flex h-full w-full items-center justify-center bg-destructive p-20 text-h2 text-destructive-foreground">
-			<p>Oh no, something went wrong. Sorry about that.</p>
+			{errorMessage}
 		</div>
 	)
 }
