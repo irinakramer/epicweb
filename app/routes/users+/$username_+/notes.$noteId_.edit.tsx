@@ -7,7 +7,7 @@ import { Input } from '#app/components/ui/input.tsx'
 import { Label } from '#app/components/ui/label.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { Textarea } from '#app/components/ui/textarea.tsx'
-import { db } from '#app/utils/db.server.ts'
+import { db, updateNote } from '#app/utils/db.server.ts'
 import { invariantResponse, useIsSubmitting } from '#app/utils/misc.tsx'
 
 export async function loader({ params }: DataFunctionArgs) {
@@ -27,6 +27,8 @@ export async function loader({ params }: DataFunctionArgs) {
 }
 
 export async function action({ request, params }: DataFunctionArgs) {
+	invariantResponse(params.noteId, 'noteId param is required')
+
 	const formData = await request.formData()
 	const title = formData.get('title')
 	const content = formData.get('content')
@@ -34,10 +36,7 @@ export async function action({ request, params }: DataFunctionArgs) {
 	invariantResponse(typeof title === 'string', 'Title must be a string')
 	invariantResponse(typeof content === 'string', 'Content must be a string')
 
-	db.note.update({
-		where: { id: { equals: params.noteId } },
-		data: { title, content },
-	})
+	await updateNote({ id: params.noteId, title, content })
 
 	return redirect(`/users/${params.username}/notes/${params.noteId}`)
 }
