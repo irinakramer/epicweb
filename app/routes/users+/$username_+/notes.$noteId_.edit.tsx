@@ -54,11 +54,21 @@ export default function NoteEdit() {
 			<div className="flex flex-col gap-1">
 				<div>
 					<Label>Title</Label>
-					<Input name="title" defaultValue={data.note.title} />
+					<Input
+						name="title"
+						defaultValue={data.note.title}
+						required
+						maxLength={100}
+					/>
 				</div>
 				<div>
 					<Label>Content</Label>
-					<Textarea name="content" defaultValue={data.note.content} />
+					<Textarea
+						name="content"
+						defaultValue={data.note.content}
+						required
+						maxLength={10000}
+					/>
 				</div>
 				<div className={floatingToolbarClassName}>
 					<Button variant="destructive" type="reset">
