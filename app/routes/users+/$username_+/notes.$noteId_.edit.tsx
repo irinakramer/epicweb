@@ -59,14 +59,16 @@ export async function action({ request, params }: DataFunctionArgs) {
 		errors.fieldErrors.title.push('Title is required')
 	}
 	if (title.length > titleMaxLength) {
-		errors.fieldErrors.title.push('Title must be at most 100 characters long')
+		errors.fieldErrors.title.push(
+			`Title must be at most ${titleMaxLength} characters long`,
+		)
 	}
 	if (content === '') {
 		errors.fieldErrors.content.push('Content is required')
 	}
 	if (content.length > contentMaxLength) {
 		errors.fieldErrors.content.push(
-			'Content must be at most 10,000 characters long',
+			`Content must be at most ${contentMaxLength} characters long`,
 		)
 	}
 	// 🐨 if there are any errors, then return a json response with the errors
