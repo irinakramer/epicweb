@@ -1,5 +1,6 @@
 import { json, redirect, type DataFunctionArgs } from '@remix-run/node'
 import { Form, useLoaderData, useActionData } from '@remix-run/react'
+import { useState, useEffect } from 'react'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { floatingToolbarClassName } from '#app/components/floating-toolbar.tsx'
 import { Button } from '#app/components/ui/button.tsx'
@@ -103,6 +104,12 @@ function ErrorList({ errors }: { errors?: Array<string> | null }) {
 	) : null
 }
 
+function useHydrated() {
+	const [hydrated, setHydrated] = useState(false)
+	useEffect(() => setHydrated(true), [])
+	return hydrated
+}
+
 export default function NoteEdit() {
 	const data = useLoaderData<typeof loader>()
 	const actionData = useActionData<typeof action>()
@@ -115,13 +122,15 @@ export default function NoteEdit() {
 	const formErrors =
 		actionData?.status === 'error' ? actionData.errors.formErrors : null
 
+	const isHydrated = useHydrated()
+
 	return (
 		<div className="absolute inset-0">
 			<Form
 				id={formId}
 				// 🐨 to test out the server-side validation, you need to disable the
 				// client-side validation. You can do that by adding:
-				noValidate
+				noValidate={isHydrated}
 				method="post"
 				className="flex h-full flex-col gap-y-4 overflow-y-auto overflow-x-hidden px-10 pb-28 pt-12"
 			>
