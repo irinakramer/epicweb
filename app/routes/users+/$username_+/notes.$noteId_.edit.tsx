@@ -1,6 +1,6 @@
 import { json, redirect, type DataFunctionArgs } from '@remix-run/node'
 import { Form, useLoaderData, useActionData } from '@remix-run/react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useId } from 'react'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { floatingToolbarClassName } from '#app/components/floating-toolbar.tsx'
 import { Button } from '#app/components/ui/button.tsx'
@@ -123,6 +123,8 @@ export default function NoteEdit() {
 		actionData?.status === 'error' ? actionData.errors.formErrors : null
 
 	const isHydrated = useHydrated()
+	const noteTitleId = useId()
+	const noteContentId = useId()
 
 	return (
 		<div className="absolute inset-0">
@@ -136,8 +138,9 @@ export default function NoteEdit() {
 			>
 				<div className="flex flex-col gap-1">
 					<div>
-						<Label>Title</Label>
+						<Label htmlFor={noteTitleId}>Title</Label>
 						<Input
+							id={noteTitleId}
 							name="title"
 							defaultValue={data.note.title}
 							required
@@ -148,8 +151,9 @@ export default function NoteEdit() {
 						</div>
 					</div>
 					<div>
-						<Label>Content</Label>
+						<Label htmlFor={noteContentId}>Content</Label>
 						<Textarea
+							id={noteContentId}
 							name="content"
 							defaultValue={data.note.content}
 							required
@@ -163,7 +167,7 @@ export default function NoteEdit() {
 				<ErrorList errors={formErrors} />
 			</Form>
 			<div className={floatingToolbarClassName}>
-				<Button variant="destructive" type="reset">
+				<Button form={formId} variant="destructive" type="reset">
 					Reset
 				</Button>
 				<StatusButton
