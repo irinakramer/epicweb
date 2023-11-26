@@ -92,9 +92,15 @@ export async function action({ request, params }: DataFunctionArgs) {
 	return redirect(`/users/${params.username}/notes/${params.noteId}`)
 }
 
-function ErrorList({ errors }: { errors?: Array<string> | null }) {
+function ErrorList({
+	id,
+	errors,
+}: {
+	id?: string
+	errors?: Array<string> | null
+}) {
 	return errors?.length ? (
-		<ul className="flex flex-col gap-1">
+		<ul id={id} className="flex flex-col gap-1">
 			{errors.map((error, i) => (
 				<li key={i} className="text-[10px] text-foreground-destructive">
 					{error}
@@ -125,16 +131,21 @@ export default function NoteEdit() {
 	const isHydrated = useHydrated()
 	const noteTitleId = useId()
 	const noteContentId = useId()
-
+	const formHasErrors = Boolean(formErrors?.length)
+	const formErrorId = formHasErrors ? 'form-error' : undefined
+	const titleHasErrors = Boolean(fieldErrors?.title.length)
+	const titleErrorId = titleHasErrors ? 'title-error' : undefined
+	const contentHasErrors = Boolean(fieldErrors?.content.length)
+	const contentErrorId = contentHasErrors ? 'content-error' : undefined
 	return (
 		<div className="absolute inset-0">
 			<Form
 				id={formId}
-				// 🐨 to test out the server-side validation, you need to disable the
-				// client-side validation. You can do that by adding:
 				noValidate={isHydrated}
 				method="post"
 				className="flex h-full flex-col gap-y-4 overflow-y-auto overflow-x-hidden px-10 pb-28 pt-12"
+				aria-invalid={formHasErrors || undefined}
+				aria-describedby={formErrorId}
 			>
 				<div className="flex flex-col gap-1">
 					<div>
@@ -145,9 +156,11 @@ export default function NoteEdit() {
 							defaultValue={data.note.title}
 							required
 							maxLength={titleMaxLength}
+							aria-invalid={titleHasErrors || undefined}
+							aria-describedby={titleErrorId}
 						/>
 						<div className="min-h-[32px] px-4 pb-3 pt-1">
-							<ErrorList errors={fieldErrors?.title} />
+							<ErrorList errors={fieldErrors?.title} id={titleErrorId} />
 						</div>
 					</div>
 					<div>
@@ -158,13 +171,15 @@ export default function NoteEdit() {
 							defaultValue={data.note.content}
 							required
 							maxLength={contentMaxLength}
+							aria-invalid={contentHasErrors || undefined}
+							aria-describedby={contentErrorId}
 						/>
 						<div className="min-h-[32px] px-4 pb-3 pt-1">
-							<ErrorList errors={fieldErrors?.content} />
+							<ErrorList errors={fieldErrors?.content} id={contentErrorId} />
 						</div>
 					</div>
 				</div>
-				<ErrorList errors={formErrors} />
+				<ErrorList errors={formErrors} id={formErrorId} />
 			</Form>
 			<div className={floatingToolbarClassName}>
 				<Button form={formId} variant="destructive" type="reset">
