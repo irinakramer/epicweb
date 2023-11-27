@@ -1,6 +1,6 @@
 import { json, redirect, type DataFunctionArgs } from '@remix-run/node'
 import { Form, useLoaderData, useActionData } from '@remix-run/react'
-import { useState, useEffect, useId } from 'react'
+import { useState, useEffect, useId, useRef } from 'react'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { floatingToolbarClassName } from '#app/components/floating-toolbar.tsx'
 import { Button } from '#app/components/ui/button.tsx'
@@ -46,7 +46,6 @@ export async function action({ request, params }: DataFunctionArgs) {
 	invariantResponse(typeof title === 'string', 'Title must be a string')
 	invariantResponse(typeof content === 'string', 'Content must be a string')
 
-	// 🐨 create an errors object here
 	const errors: ActionErrors = {
 		formErrors: [],
 		fieldErrors: {
@@ -54,8 +53,7 @@ export async function action({ request, params }: DataFunctionArgs) {
 			content: [],
 		},
 	}
-	// 🐨 validate the requirements for the title and content and add any errors
-	// to the errors object
+
 	if (title === '') {
 		errors.fieldErrors.title.push('Title is required')
 	}
@@ -72,8 +70,7 @@ export async function action({ request, params }: DataFunctionArgs) {
 			`Content must be at most ${contentMaxLength} characters long`,
 		)
 	}
-	// 🐨 if there are any errors, then return a json response with the errors
-	// and a 400 status code
+
 	const hasErrors =
 		errors.formErrors.length ||
 		Object.values(errors.fieldErrors).some(fieldErrros => fieldErrros.length)
@@ -119,10 +116,10 @@ function useHydrated() {
 export default function NoteEdit() {
 	const data = useLoaderData<typeof loader>()
 	const actionData = useActionData<typeof action>()
+	const formRef = useRef<HTMLFormElement>(null)
 	const isSubmitting = useIsSubmitting()
 	const formId = 'note-editor'
 
-	// 🐨 get the fieldErrors here from the actionData
 	const fieldErrors =
 		actionData?.status === 'error' ? actionData.errors.fieldErrors : null
 	const formErrors =
@@ -137,6 +134,22 @@ export default function NoteEdit() {
 	const titleErrorId = titleHasErrors ? 'title-error' : undefined
 	const contentHasErrors = Boolean(fieldErrors?.content.length)
 	const contentErrorId = contentHasErrors ? 'content-error' : undefined
+
+	useEffect(() => {
+		const formEl = formRef.current
+		if (!formEl) return
+		if (actionData?.status !== 'error') return
+
+		if (formEl.matches('[aria-invalid="true"]')) {
+			formEl.focus()
+		} else {
+			const firstInvalid = formEl.querySelector('[aria-invalid="true"]')
+			if (firstInvalid instanceof HTMLElement) {
+				firstInvalid.focus()
+			}
+		}
+	}, [actionData])
+
 	return (
 		<div className="absolute inset-0">
 			<Form
@@ -146,6 +159,8 @@ export default function NoteEdit() {
 				className="flex h-full flex-col gap-y-4 overflow-y-auto overflow-x-hidden px-10 pb-28 pt-12"
 				aria-invalid={formHasErrors || undefined}
 				aria-describedby={formErrorId}
+				ref={formRef}
+				tabIndex={-1}
 			>
 				<div className="flex flex-col gap-1">
 					<div>
@@ -158,6 +173,7 @@ export default function NoteEdit() {
 							maxLength={titleMaxLength}
 							aria-invalid={titleHasErrors || undefined}
 							aria-describedby={titleErrorId}
+							autoFocus
 						/>
 						<div className="min-h-[32px] px-4 pb-3 pt-1">
 							<ErrorList errors={fieldErrors?.title} id={titleErrorId} />
