@@ -9,7 +9,11 @@ import { Label } from '#app/components/ui/label.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { Textarea } from '#app/components/ui/textarea.tsx'
 import { db, updateNote } from '#app/utils/db.server.ts'
-import { invariantResponse, useIsSubmitting } from '#app/utils/misc.tsx'
+import {
+	invariantResponse,
+	useIsSubmitting,
+	useFocusInvalid,
+} from '#app/utils/misc.tsx'
 
 export async function loader({ params }: DataFunctionArgs) {
 	const note = db.note.findFirst({
@@ -135,20 +139,7 @@ export default function NoteEdit() {
 	const contentHasErrors = Boolean(fieldErrors?.content.length)
 	const contentErrorId = contentHasErrors ? 'content-error' : undefined
 
-	useEffect(() => {
-		const formEl = formRef.current
-		if (!formEl) return
-		if (actionData?.status !== 'error') return
-
-		if (formEl.matches('[aria-invalid="true"]')) {
-			formEl.focus()
-		} else {
-			const firstInvalid = formEl.querySelector('[aria-invalid="true"]')
-			if (firstInvalid instanceof HTMLElement) {
-				firstInvalid.focus()
-			}
-		}
-	}, [actionData])
+	useFocusInvalid(formRef.current, actionData?.status === 'error')
 
 	return (
 		<div className="absolute inset-0">
