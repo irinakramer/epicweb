@@ -36,8 +36,14 @@ const titleMaxLength = 100
 const contentMaxLength = 10000
 
 const NoteEditorSchema = z.object({
-	title: z.string().min(1).max(titleMaxLength),
-	content: z.string().min(1).max(contentMaxLength),
+	title: z
+		.string()
+		.min(1, { message: 'Title is required' })
+		.max(titleMaxLength),
+	content: z
+		.string()
+		.min(1, { message: 'Content is required' })
+		.max(contentMaxLength),
 })
 
 export async function action({ request, params }: DataFunctionArgs) {
