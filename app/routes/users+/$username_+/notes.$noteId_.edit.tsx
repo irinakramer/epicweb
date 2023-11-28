@@ -1,6 +1,7 @@
 import { json, redirect, type DataFunctionArgs } from '@remix-run/node'
 import { Form, useLoaderData, useActionData } from '@remix-run/react'
-import { useState, useEffect, useId, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { z } from 'zod'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { floatingToolbarClassName } from '#app/components/floating-toolbar.tsx'
 import { Button } from '#app/components/ui/button.tsx'
@@ -31,64 +32,37 @@ export async function loader({ params }: DataFunctionArgs) {
 	})
 }
 
-type ActionErrors = {
-	formErrors: Array<string>
-	fieldErrors: {
-		title: Array<string>
-		content: Array<string>
-	}
-}
 const titleMaxLength = 100
 const contentMaxLength = 10000
+
+const NoteEditorSchema = z.object({
+	title: z.string().min(1).max(titleMaxLength),
+	content: z.string().min(1).max(contentMaxLength),
+})
 
 export async function action({ request, params }: DataFunctionArgs) {
 	invariantResponse(params.noteId, 'noteId param is required')
 
 	const formData = await request.formData()
-	const title = formData.get('title')
-	const content = formData.get('content')
-	invariantResponse(typeof title === 'string', 'Title must be a string')
-	invariantResponse(typeof content === 'string', 'Content must be a string')
 
-	const errors: ActionErrors = {
-		formErrors: [],
-		fieldErrors: {
-			title: [],
-			content: [],
-		},
-	}
+	const result = NoteEditorSchema.safeParse({
+		title: formData.get('title'),
+		content: formData.get('content'),
+	})
 
-	if (title === '') {
-		errors.fieldErrors.title.push('Title is required')
-	}
-	if (title.length > titleMaxLength) {
-		errors.fieldErrors.title.push(
-			`Title must be at most ${titleMaxLength} characters long`,
-		)
-	}
-	if (content === '') {
-		errors.fieldErrors.content.push('Content is required')
-	}
-	if (content.length > contentMaxLength) {
-		errors.fieldErrors.content.push(
-			`Content must be at most ${contentMaxLength} characters long`,
-		)
+	if (!result.success) {
+		return json({ status: 'error', errors: result.error.flatten() } as const, {
+			status: 400,
+		})
 	}
 
-	const hasErrors =
-		errors.formErrors.length ||
-		Object.values(errors.fieldErrors).some(fieldErrros => fieldErrros.length)
-	if (hasErrors) {
-		return json(
-			{
-				status: 'error',
-				errors,
-			} as const,
-			{ status: 400 },
-		)
-	}
+	const { title, content } = result.data
 
-	await updateNote({ id: params.noteId, title, content })
+	await updateNote({
+		id: params.noteId,
+		title,
+		content,
+	})
 
 	return redirect(`/users/${params.username}/notes/${params.noteId}`)
 }
@@ -130,13 +104,11 @@ export default function NoteEdit() {
 		actionData?.status === 'error' ? actionData.errors.formErrors : null
 
 	const isHydrated = useHydrated()
-	const noteTitleId = useId()
-	const noteContentId = useId()
 	const formHasErrors = Boolean(formErrors?.length)
 	const formErrorId = formHasErrors ? 'form-error' : undefined
-	const titleHasErrors = Boolean(fieldErrors?.title.length)
+	const titleHasErrors = Boolean(fieldErrors?.title?.length)
 	const titleErrorId = titleHasErrors ? 'title-error' : undefined
-	const contentHasErrors = Boolean(fieldErrors?.content.length)
+	const contentHasErrors = Boolean(fieldErrors?.content?.length)
 	const contentErrorId = contentHasErrors ? 'content-error' : undefined
 
 	useFocusInvalid(formRef.current, actionData?.status === 'error')
@@ -155,9 +127,9 @@ export default function NoteEdit() {
 			>
 				<div className="flex flex-col gap-1">
 					<div>
-						<Label htmlFor={noteTitleId}>Title</Label>
+						<Label htmlFor="note-title">Title</Label>
 						<Input
-							id={noteTitleId}
+							id="note-title"
 							name="title"
 							defaultValue={data.note.title}
 							required
@@ -171,9 +143,9 @@ export default function NoteEdit() {
 						</div>
 					</div>
 					<div>
-						<Label htmlFor={noteContentId}>Content</Label>
+						<Label htmlFor="note-content">Content</Label>
 						<Textarea
-							id={noteContentId}
+							id="note-content"
 							name="content"
 							defaultValue={data.note.content}
 							required
