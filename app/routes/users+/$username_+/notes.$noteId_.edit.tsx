@@ -1,6 +1,7 @@
+import { parse } from '@conform-to/zod'
 import { json, redirect, type DataFunctionArgs } from '@remix-run/node'
-import { Form, useLoaderData, useActionData } from '@remix-run/react'
-import { useState, useEffect, useRef } from 'react'
+import { Form, useActionData, useLoaderData } from '@remix-run/react'
+import { useEffect, useRef, useState } from 'react'
 import { z } from 'zod'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { floatingToolbarClassName } from '#app/components/floating-toolbar.tsx'
@@ -12,8 +13,8 @@ import { Textarea } from '#app/components/ui/textarea.tsx'
 import { db, updateNote } from '#app/utils/db.server.ts'
 import {
 	invariantResponse,
-	useIsSubmitting,
 	useFocusInvalid,
+	useIsSubmitting,
 } from '#app/utils/misc.tsx'
 
 export async function loader({ params }: DataFunctionArgs) {
@@ -36,14 +37,8 @@ const titleMaxLength = 100
 const contentMaxLength = 10000
 
 const NoteEditorSchema = z.object({
-	title: z
-		.string()
-		.min(1, { message: 'Title is required' })
-		.max(titleMaxLength),
-	content: z
-		.string()
-		.min(1, { message: 'Content is required' })
-		.max(contentMaxLength),
+	title: z.string().max(titleMaxLength),
+	content: z.string().max(contentMaxLength),
 })
 
 export async function action({ request, params }: DataFunctionArgs) {
@@ -51,24 +46,19 @@ export async function action({ request, params }: DataFunctionArgs) {
 
 	const formData = await request.formData()
 
-	const result = NoteEditorSchema.safeParse({
-		title: formData.get('title'),
-		content: formData.get('content'),
+	const submission = parse(formData, {
+		schema: NoteEditorSchema,
 	})
 
-	if (!result.success) {
-		return json({ status: 'error', errors: result.error.flatten() } as const, {
+	if (!submission.value) {
+		return json({ status: 'error', submission } as const, {
 			status: 400,
 		})
 	}
 
-	const { title, content } = result.data
+	const { title, content } = submission.value
 
-	await updateNote({
-		id: params.noteId,
-		title,
-		content,
-	})
+	await updateNote({ id: params.noteId, title, content })
 
 	return redirect(`/users/${params.username}/notes/${params.noteId}`)
 }
@@ -101,15 +91,15 @@ export default function NoteEdit() {
 	const data = useLoaderData<typeof loader>()
 	const actionData = useActionData<typeof action>()
 	const formRef = useRef<HTMLFormElement>(null)
-	const isSubmitting = useIsSubmitting()
 	const formId = 'note-editor'
+	const isSubmitting = useIsSubmitting()
 
 	const fieldErrors =
-		actionData?.status === 'error' ? actionData.errors.fieldErrors : null
+		actionData?.status === 'error' ? actionData.submission.error : null
 	const formErrors =
-		actionData?.status === 'error' ? actionData.errors.formErrors : null
-
+		actionData?.status === 'error' ? actionData.submission.error[''] : null
 	const isHydrated = useHydrated()
+
 	const formHasErrors = Boolean(formErrors?.length)
 	const formErrorId = formHasErrors ? 'form-error' : undefined
 	const titleHasErrors = Boolean(fieldErrors?.title?.length)
@@ -145,7 +135,7 @@ export default function NoteEdit() {
 							autoFocus
 						/>
 						<div className="min-h-[32px] px-4 pb-3 pt-1">
-							<ErrorList errors={fieldErrors?.title} id={titleErrorId} />
+							<ErrorList id={titleErrorId} errors={fieldErrors?.title} />
 						</div>
 					</div>
 					<div>
@@ -160,11 +150,11 @@ export default function NoteEdit() {
 							aria-describedby={contentErrorId}
 						/>
 						<div className="min-h-[32px] px-4 pb-3 pt-1">
-							<ErrorList errors={fieldErrors?.content} id={contentErrorId} />
+							<ErrorList id={contentErrorId} errors={fieldErrors?.content} />
 						</div>
 					</div>
 				</div>
-				<ErrorList errors={formErrors} id={formErrorId} />
+				<ErrorList id={formErrorId} errors={formErrors} />
 			</Form>
 			<div className={floatingToolbarClassName}>
 				<Button form={formId} variant="destructive" type="reset">
