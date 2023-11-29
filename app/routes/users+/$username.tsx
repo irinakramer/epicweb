@@ -22,7 +22,7 @@ export default function ProfileRoute() {
 	const data = useLoaderData<typeof loader>()
 
 	return (
-		<div className="container mb-48 mt-36 border-4 border-green-500">
+		<div className="container mb-48 mt-36">
 			<h1 className="text-h1">{data.user.name ?? data.user.username}</h1>
 			<Link to="notes" prefetch="intent" className="underline">
 				Notes
