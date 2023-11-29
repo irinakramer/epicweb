@@ -1,6 +1,12 @@
 import { conform, useForm } from '@conform-to/react'
 import { getFieldsetConstraint, parse } from '@conform-to/zod'
-import { json, redirect, type DataFunctionArgs } from '@remix-run/node'
+import {
+	json,
+	redirect,
+	type DataFunctionArgs,
+	unstable_createMemoryUploadHandler as createMemoryUploadHandler,
+	unstable_parseMultipartFormData as parseMultipartFormData,
+} from '@remix-run/node'
 import { Form, useActionData, useLoaderData } from '@remix-run/react'
 import { useState } from 'react'
 import { z } from 'zod'
@@ -36,6 +42,7 @@ export async function loader({ params }: DataFunctionArgs) {
 
 const titleMaxLength = 100
 const contentMaxLength = 10000
+const MAX_UPLOAD_SIZE = 1024 * 1024 * 3 // 3MB
 
 const NoteEditorSchema = z.object({
 	title: z.string().max(titleMaxLength),
@@ -45,7 +52,12 @@ const NoteEditorSchema = z.object({
 export async function action({ request, params }: DataFunctionArgs) {
 	invariantResponse(params.noteId, 'noteId param is required')
 
-	const formData = await request.formData()
+	const formData = await parseMultipartFormData(
+		request,
+		createMemoryUploadHandler({
+			maxPartSize: MAX_UPLOAD_SIZE,
+		}),
+	)
 	const submission = parse(formData, {
 		schema: NoteEditorSchema,
 	})
@@ -55,10 +67,23 @@ export async function action({ request, params }: DataFunctionArgs) {
 			status: 400,
 		})
 	}
-
 	const { title, content } = submission.value
 
-	await updateNote({ id: params.noteId, title, content })
+	await updateNote({
+		id: params.noteId,
+		title,
+		content,
+		images: [
+			{
+				// @ts-expect-error
+				id: formData.get('imageId'),
+				// @ts-expect-error
+				file: formData.get('file'),
+				// @ts-expect-error
+				altText: formData.get('altText'),
+			},
+		],
+	})
 
 	return redirect(`/users/${params.username}/notes/${params.noteId}`)
 }
@@ -105,6 +130,7 @@ export default function NoteEdit() {
 				method="post"
 				className="flex h-full flex-col gap-y-4 overflow-y-auto overflow-x-hidden px-10 pb-28 pt-12"
 				{...form.props}
+				encType="multipart/form-data"
 			>
 				<div className="flex flex-col gap-1">
 					<div>
@@ -129,6 +155,7 @@ export default function NoteEdit() {
 					</div>
 					<div>
 						<Label>Image</Label>
+						<ImageChooser image={data.note.images[0]} />
 					</div>
 				</div>
 				<ErrorList id={form.errorId} errors={form.errors} />
@@ -150,7 +177,6 @@ export default function NoteEdit() {
 	)
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function ImageChooser({
 	image,
 }: {
@@ -193,7 +219,10 @@ function ImageChooser({
 									➕
 								</div>
 							)}
-							{/* 🐨 if there's an existing image, add a hidden input that with a name "imageId" and the value set to the image's id */}
+
+							{existingImage ? (
+								<input type="hidden" name="imageId" value={image?.id} />
+							) : null}
 							<input
 								id="image-input"
 								aria-label="Image"
@@ -211,9 +240,9 @@ function ImageChooser({
 										setPreviewImage(null)
 									}
 								}}
-								// 🐨 add a name of "file" here:
+								name="file"
 								type="file"
-								// 🐨 add accept="image/*" here so users only upload images
+								accept="image/*"
 							/>
 						</label>
 					</div>
@@ -222,7 +251,7 @@ function ImageChooser({
 					<Label htmlFor="alt-text">Alt Text</Label>
 					<Textarea
 						id="alt-text"
-						// 🐨 add a name of "altText" here
+						name="altText"
 						defaultValue={altText}
 						onChange={e => setAltText(e.currentTarget.value)}
 					/>
