@@ -1,5 +1,6 @@
 import {
 	conform,
+	list,
 	useFieldList,
 	useFieldset,
 	useForm,
@@ -80,6 +81,10 @@ export async function action({ request, params }: DataFunctionArgs) {
 		schema: NoteEditorSchema,
 	})
 
+	if (submission.intent !== 'submit') {
+		return json({ status: 'idle', submission } as const)
+	}
+
 	if (!submission.value) {
 		return json({ status: 'error', submission } as const, {
 			status: 400,
@@ -137,6 +142,12 @@ export default function NoteEdit() {
 				{...form.props}
 				encType="multipart/form-data"
 			>
+				{/*
+					This hidden submit button is here to ensure that when the user hits
+					"enter" on an input field, the primary form function is submitted
+					rather than the first button in the form (which is delete/add image).
+				*/}
+				<button type="submit" className="hidden" />
 				<div className="flex flex-col gap-1">
 					<div>
 						<Label htmlFor={fields.title.id}>Title</Label>
@@ -159,15 +170,32 @@ export default function NoteEdit() {
 						</div>
 					</div>
 					<div>
-						<Label>Image</Label>
+						<Label>Images</Label>
 						<ul className="flex flex-col gap-4">
-							{imageList.map(image => (
-								<li key={image.id}>
+							{imageList.map((image, index) => (
+								<li
+									key={image.key}
+									className="relative border-b-2 border-muted-foreground"
+								>
+									<button
+										{...list.remove(fields.images.name, { index })}
+										className="text-foreground-destructive absolute right-0 top-0"
+									>
+										<span aria-hidden>❌</span>
+										<span className="sr-only">Remove image {index + 1}</span>
+									</button>
 									<ImageChooser config={image} />
 								</li>
 							))}
 						</ul>
 					</div>
+					<Button
+						className="mt-3"
+						{...list.insert(fields.images.name, { defaultValue: {} })}
+					>
+						<span aria-hidden>➕ Image</span>
+						<span className="sr-only">Add image</span>
+					</Button>
 				</div>
 				<ErrorList id={form.errorId} errors={form.errors} />
 			</Form>
