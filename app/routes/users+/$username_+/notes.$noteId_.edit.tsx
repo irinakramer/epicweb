@@ -256,6 +256,9 @@ function ImageChooser({
 							/>
 						</label>
 					</div>
+					<div className="min-h-[32px] px-4 pb-3 pt-1">
+						<ErrorList id={fields.file.errorId} errors={fields.file.errors} />
+					</div>
 				</div>
 				<div className="flex-1">
 					<Label htmlFor={fields.altText.id}>Alt Text</Label>
@@ -263,7 +266,16 @@ function ImageChooser({
 						onChange={e => setAltText(e.currentTarget.value)}
 						{...conform.textarea(fields.altText)}
 					/>
+					<div className="min-h-[32px] px-4 pb-3 pt-1">
+						<ErrorList
+							id={fields.altText.errorId}
+							errors={fields.altText.errors}
+						/>
+					</div>
 				</div>
+			</div>
+			<div className="min-h-[32px] px-4 pb-3 pt-1">
+				<ErrorList id={config.errorId} errors={config.errors} />
 			</div>
 		</fieldset>
 	)
