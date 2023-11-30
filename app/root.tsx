@@ -71,8 +71,8 @@ export default function App() {
 						<div className="font-light">epic</div>
 						<div className="font-bold">notes</div>
 					</Link>
-					<Link className="underline" to="users/kody">
-						Kody
+					<Link className="underline" to="/signup">
+						Signup
 					</Link>
 				</nav>
 			</header>
