@@ -1,5 +1,6 @@
 import {
 	conform,
+	useFieldList,
 	useFieldset,
 	useForm,
 	type FieldConfig,
@@ -64,7 +65,7 @@ const ImageFieldsetSchema = z.object({
 const NoteEditorSchema = z.object({
 	title: z.string().max(titleMaxLength),
 	content: z.string().max(contentMaxLength),
-	image: ImageFieldsetSchema,
+	images: z.array(ImageFieldsetSchema),
 })
 
 export async function action({ request, params }: DataFunctionArgs) {
@@ -84,9 +85,8 @@ export async function action({ request, params }: DataFunctionArgs) {
 			status: 400,
 		})
 	}
-	const { title, content, image } = submission.value
-
-	await updateNote({ id: params.noteId, title, content, images: [image] })
+	const { title, content, images } = submission.value
+	await updateNote({ id: params.noteId, title, content, images })
 
 	return redirect(`/users/${params.username}/notes/${params.noteId}`)
 }
@@ -124,9 +124,10 @@ export default function NoteEdit() {
 		defaultValue: {
 			title: data.note.title,
 			content: data.note.content,
-			image: data.note.images[0],
+			images: data.note.images.length ? data.note.images : [{}],
 		},
 	})
+	const imageList = useFieldList(form.ref, fields.images)
 
 	return (
 		<div className="absolute inset-0">
@@ -159,7 +160,13 @@ export default function NoteEdit() {
 					</div>
 					<div>
 						<Label>Image</Label>
-						<ImageChooser config={fields.image} />
+						<ul className="flex flex-col gap-4">
+							{imageList.map(image => (
+								<li key={image.id}>
+									<ImageChooser config={image} />
+								</li>
+							))}
+						</ul>
 					</div>
 				</div>
 				<ErrorList id={form.errorId} errors={form.errors} />
@@ -188,7 +195,6 @@ function ImageChooser({
 }) {
 	const ref = useRef<HTMLFieldSetElement>(null)
 	const fields = useFieldset(ref, config)
-
 	const existingImage = Boolean(fields.id.defaultValue)
 	const [previewImage, setPreviewImage] = useState<string | null>(
 		existingImage ? `/resources/images/${fields.id.defaultValue}` : null,
