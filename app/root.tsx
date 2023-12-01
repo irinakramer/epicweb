@@ -12,42 +12,35 @@ import {
 	useLoaderData,
 	type MetaFunction,
 } from '@remix-run/react'
+import { HoneypotProvider } from 'remix-utils/honeypot/react'
 import faviconAssetUrl from './assets/favicon.svg'
 import { GeneralErrorBoundary } from './components/error-boundary.tsx'
-import fontStylesheetUrl from './styles/font.css'
+import fontStylestylesheetUrl from './styles/font.css'
 import tailwindStylesheetUrl from './styles/tailwind.css'
 import { getEnv } from './utils/env.server.ts'
-
-export async function loader() {
-	return json({ username: os.userInfo().username, ENV: getEnv() })
-}
+import { honeypot } from './utils/honeypot.server.ts'
 
 export const links: LinksFunction = () => {
 	return [
-		{
-			rel: 'icon',
-			type: 'image/svg+xml',
-			href: faviconAssetUrl,
-		},
-		{
-			rel: 'stylesheet',
-			href: fontStylesheetUrl,
-		},
-		{
-			rel: 'stylesheet',
-			href: tailwindStylesheetUrl,
-		},
+		{ rel: 'icon', type: 'image/svg+xml', href: faviconAssetUrl },
+		{ rel: 'stylesheet', href: fontStylestylesheetUrl },
+		{ rel: 'stylesheet', href: tailwindStylesheetUrl },
 		cssBundleHref ? { rel: 'stylesheet', href: cssBundleHref } : null,
 	].filter(Boolean)
 }
 
-export function Document({ children }: { children: React.ReactNode }) {
+export async function loader() {
+	const honeyProps = honeypot.getInputProps()
+	return json({ username: os.userInfo().username, ENV: getEnv(), honeyProps })
+}
+
+function Document({ children }: { children: React.ReactNode }) {
 	return (
 		<html lang="en" className="h-full overflow-x-hidden">
 			<head>
+				<Meta />
 				<meta charSet="utf-8" />
 				<meta name="viewport" content="width=device-width,initial-scale=1" />
-				<Meta />
 				<Links />
 			</head>
 			<body className="flex h-full flex-col justify-between bg-background text-foreground">
@@ -60,8 +53,7 @@ export function Document({ children }: { children: React.ReactNode }) {
 	)
 }
 
-export default function App() {
-	// throw new Error('🐨 root component error')
+function App() {
 	const data = useLoaderData<typeof loader>()
 	return (
 		<Document>
@@ -95,6 +87,15 @@ export default function App() {
 				}}
 			/>
 		</Document>
+	)
+}
+
+export default function AppWithProviders() {
+	const data = useLoaderData<typeof loader>()
+	return (
+		<HoneypotProvider {...data.honeyProps}>
+			<App />
+		</HoneypotProvider>
 	)
 }
 
