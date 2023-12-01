@@ -7,9 +7,12 @@ import { Form } from '@remix-run/react'
 import { Button } from '#app/components/ui/button.tsx'
 import { Input } from '#app/components/ui/input.tsx'
 import { Label } from '#app/components/ui/label.tsx'
+import { invariantResponse } from '#app/utils/misc.tsx'
 
 export async function action({ request }: DataFunctionArgs) {
 	const formData = await request.formData()
+
+	invariantResponse(!formData.get('name'), 'Form not submitted properly')
 
 	return redirect('/')
 }
@@ -28,6 +31,10 @@ export default function SignupRoute() {
 					method="POST"
 					className="mx-auto flex min-w-[368px] max-w-sm flex-col gap-4"
 				>
+					<div style={{ display: 'none' }} aria-hidden>
+						<label htmlFor="name-input">Please leave this field blank</label>
+						<input id="name-input" name="name" type="text" />
+					</div>
 					<div>
 						<Label htmlFor="email-input">Email</Label>
 						<Input autoFocus id="email-input" name="email" type="email" />
