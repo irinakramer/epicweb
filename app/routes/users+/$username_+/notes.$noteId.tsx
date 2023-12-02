@@ -1,8 +1,11 @@
 import { json, type DataFunctionArgs, redirect } from '@remix-run/node'
 import { Form, Link, useLoaderData, type MetaFunction } from '@remix-run/react'
+import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
+import { CSRFError } from 'remix-utils/csrf/server'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { floatingToolbarClassName } from '#app/components/floating-toolbar.tsx'
 import { Button } from '#app/components/ui/button.tsx'
+import { csrf } from '#app/utils/csrf.server.ts'
 import { db } from '#app/utils/db.server.ts'
 import { invariantResponse } from '#app/utils/misc.tsx'
 import { type loader as notesLoader } from './notes.tsx'
@@ -26,13 +29,24 @@ export async function loader({ params }: DataFunctionArgs) {
 }
 
 export async function action({ request, params }: DataFunctionArgs) {
+	invariantResponse(params.noteId, 'noteId param is required')
+
 	const formData = await request.formData()
+
+	try {
+		await csrf.validate(formData, request.headers)
+	} catch (error) {
+		if (error instanceof CSRFError) {
+			throw new Response('Invalid CSRF token', { status: 403 })
+		}
+		throw error
+	}
+
 	const intent = formData.get('intent')
 
-	invariantResponse(intent === 'delete', 'Intent is not delete')
+	invariantResponse(intent === 'delete', 'Invalid intent')
 
 	db.note.delete({ where: { id: { equals: params.noteId } } })
-
 	return redirect(`/users/${params.username}/notes`)
 }
 
@@ -62,6 +76,7 @@ export default function SomeNoteId() {
 			</div>
 			<div className={floatingToolbarClassName}>
 				<Form method="post">
+					<AuthenticityTokenInput />
 					<Button
 						variant="destructive"
 						type="submit"
