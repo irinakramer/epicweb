@@ -1,6 +1,10 @@
 import os from 'node:os'
 import { cssBundleHref } from '@remix-run/css-bundle'
-import { json, type LinksFunction } from '@remix-run/node'
+import {
+	json,
+	type LinksFunction,
+	type DataFunctionArgs,
+} from '@remix-run/node'
 import {
 	Link,
 	Links,
@@ -17,6 +21,7 @@ import faviconAssetUrl from './assets/favicon.svg'
 import { GeneralErrorBoundary } from './components/error-boundary.tsx'
 import fontStylestylesheetUrl from './styles/font.css'
 import tailwindStylesheetUrl from './styles/tailwind.css'
+import { csrf } from './utils/csrf.server.ts'
 import { getEnv } from './utils/env.server.ts'
 import { honeypot } from './utils/honeypot.server.ts'
 
@@ -29,9 +34,14 @@ export const links: LinksFunction = () => {
 	].filter(Boolean)
 }
 
-export async function loader() {
+export async function loader({ request }: DataFunctionArgs) {
 	const honeyProps = honeypot.getInputProps()
-	return json({ username: os.userInfo().username, ENV: getEnv(), honeyProps })
+	const [csrfToken, csrfCookieHeader] = await csrf.commitToken(request)
+
+	return json(
+		{ username: os.userInfo().username, ENV: getEnv(), honeyProps, csrfToken },
+		{ headers: csrfCookieHeader ? { 'set-cookie': csrfCookieHeader } : {} },
+	)
 }
 
 function Document({ children }: { children: React.ReactNode }) {
