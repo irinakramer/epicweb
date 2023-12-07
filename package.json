@@ -88,5 +88,8 @@
     "/public/build",
     "/playwright-report",
     "/server-build"
-  ]
+  ],
+  "prisma": {
+    "seed": "npx tsx prisma/seed.ts"
+  }
 }
