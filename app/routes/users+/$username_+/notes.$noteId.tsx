@@ -1,4 +1,4 @@
-import { json, type DataFunctionArgs, redirect } from '@remix-run/node'
+import { json, redirect, type DataFunctionArgs } from '@remix-run/node'
 import { Form, Link, useLoaderData, type MetaFunction } from '@remix-run/react'
 import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
@@ -6,13 +6,15 @@ import { floatingToolbarClassName } from '#app/components/floating-toolbar.tsx'
 import { Button } from '#app/components/ui/button.tsx'
 import { validateCSRF } from '#app/utils/csrf.server.ts'
 import { db } from '#app/utils/db.server.ts'
-import { invariantResponse } from '#app/utils/misc.tsx'
+import { getNoteImgSrc, invariantResponse } from '#app/utils/misc.tsx'
 import { type loader as notesLoader } from './notes.tsx'
 
 export async function loader({ params }: DataFunctionArgs) {
 	const note = db.note.findFirst({
 		where: {
-			id: { equals: params.noteId },
+			id: {
+				equals: params.noteId,
+			},
 		},
 	})
 
@@ -31,9 +33,7 @@ export async function action({ request, params }: DataFunctionArgs) {
 	invariantResponse(params.noteId, 'noteId param is required')
 
 	const formData = await request.formData()
-
 	await validateCSRF(formData, request.headers)
-
 	const intent = formData.get('intent')
 
 	invariantResponse(intent === 'delete', 'Invalid intent')
@@ -42,7 +42,7 @@ export async function action({ request, params }: DataFunctionArgs) {
 	return redirect(`/users/${params.username}/notes`)
 }
 
-export default function SomeNoteId() {
+export default function NoteRoute() {
 	const data = useLoaderData<typeof loader>()
 
 	return (
@@ -52,9 +52,9 @@ export default function SomeNoteId() {
 				<ul className="flex flex-wrap gap-5 py-5">
 					{data.note.images.map(image => (
 						<li key={image.id}>
-							<a href={`/resources/images/${image.id}`}>
+							<a href={getNoteImgSrc(image.id)}>
 								<img
-									src={`/resources/images/${image.id}`}
+									src={getNoteImgSrc(image.id)}
 									alt={image.altText ?? ''}
 									className="h-32 w-32 rounded-lg object-cover"
 								/>
@@ -70,15 +70,14 @@ export default function SomeNoteId() {
 				<Form method="post">
 					<AuthenticityTokenInput />
 					<Button
-						variant="destructive"
 						type="submit"
+						variant="destructive"
 						name="intent"
 						value="delete"
 					>
 						Delete
 					</Button>
 				</Form>
-
 				<Button asChild>
 					<Link to="edit">Edit</Link>
 				</Button>
@@ -95,7 +94,6 @@ export const meta: MetaFunction<
 		m => m.id === 'routes/users+/$username_+/notes',
 	)
 	const displayName = notesMatch?.data?.owner.name ?? params.username
-
 	const noteTitle = data?.note.title ?? 'Note'
 	const noteContentsSummary =
 		data && data.note.content.length > 100

@@ -1,8 +1,7 @@
-import crypto from 'crypto'
-import path from 'path'
-import { fileURLToPath } from 'url'
-import { type RequestHandler, createRequestHandler } from '@remix-run/express'
-import { type ServerBuild, broadcastDevReady } from '@remix-run/node'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { createRequestHandler } from '@remix-run/express'
+import { broadcastDevReady, type ServerBuild } from '@remix-run/node'
 import { ip as ipAddress } from 'address'
 import chalk from 'chalk'
 import closeWithGrace from 'close-with-grace'
@@ -75,32 +74,31 @@ app.use(morgan('tiny'))
 // When running tests or running in development, we want to effectively disable
 // rate limiting because playwright tests are very fast and we don't want to
 // have to wait for the rate limit to reset between tests.
-const limitMultiple = process.env.TESTING ? 10_000 : 1
-
+const maxMultiple = process.env.TESTING ? 10_000 : 1
 const rateLimitDefault = {
 	windowMs: 60 * 1000,
-	limit: 1000 * limitMultiple,
+	max: 1000 * maxMultiple,
 	standardHeaders: true,
 	legacyHeaders: false,
 }
 
 const strongestRateLimit = rateLimit({
 	...rateLimitDefault,
-	limit: 10 * limitMultiple,
+	windowMs: 60 * 1000,
+	max: 10 * maxMultiple,
 })
 
 const strongRateLimit = rateLimit({
 	...rateLimitDefault,
-	limit: 100 * limitMultiple,
+	windowMs: 60 * 1000,
+	max: 100 * maxMultiple,
 })
 
 const generalRateLimit = rateLimit(rateLimitDefault)
-
 app.use((req, res, next) => {
 	const strongPaths = ['/signup']
-
 	if (req.method !== 'GET' && req.method !== 'HEAD') {
-		if(strongPaths.some(p => req.path.includes(p))) {
+		if (strongPaths.some(p => req.path.includes(p))) {
 			return strongestRateLimit(req, res, next)
 		}
 		return strongRateLimit(req, res, next)
@@ -109,24 +107,12 @@ app.use((req, res, next) => {
 	return generalRateLimit(req, res, next)
 })
 
-
-app.use((_, res, next) => {
-	res.locals.cspNonce = crypto.randomBytes(16).toString('hex')
-	next()
-})
-
-function getRequestHandler(build: ServerBuild): RequestHandler {
-	function getLoadContext(_: unknown, res: any) {
-		return { cspNonce: res.locals.cspNonce }
-	}
-	return createRequestHandler({ build, mode: MODE, getLoadContext })
-}
-
 app.all(
 	'*',
 	process.env.NODE_ENV === 'development'
-		? (...args) => getRequestHandler(devBuild)(...args)
-		: getRequestHandler(build),
+		? (...args) =>
+				createRequestHandler({ build: devBuild, mode: MODE })(...args)
+		: createRequestHandler({ build, mode: MODE }),
 )
 
 const desiredPort = Number(process.env.PORT || 3000)
