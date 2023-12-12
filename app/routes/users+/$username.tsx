@@ -3,26 +3,24 @@ import { Link, useLoaderData, type MetaFunction } from '@remix-run/react'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { Spacer } from '#app/components/spacer.tsx'
 import { Button } from '#app/components/ui/button.tsx'
-import { db } from '#app/utils/db.server.ts'
+import { prisma } from '#app/utils/db.server.ts'
 import { getUserImgSrc, invariantResponse } from '#app/utils/misc.tsx'
 
 export async function loader({ params }: DataFunctionArgs) {
-	const user = db.user.findFirst({
-		where: {
-			username: {
-				equals: params.username,
-			},
+	const user = await prisma.user.findUnique({
+		select: {
+			name: true,
+			username: true,
+			createdAt: true,
+			image: { select: { id: true } },
 		},
+		where: { username: params.username },
 	})
 
 	invariantResponse(user, 'User not found', { status: 404 })
 
 	return json({
-		user: {
-			name: user.name,
-			username: user.username,
-			image: user.image ? { id: user.image.id } : undefined,
-		},
+		user,
 		userJoinedDisplay: new Date(user.createdAt).toLocaleDateString(),
 	})
 }
