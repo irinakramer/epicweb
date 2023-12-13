@@ -7,6 +7,7 @@ import {
 	type FieldConfig,
 } from '@conform-to/react'
 import { getFieldsetConstraint, parse } from '@conform-to/zod'
+import { createId as cuid } from '@paralleldrive/cuid2'
 import {
 	unstable_createMemoryUploadHandler as createMemoryUploadHandler,
 	json,
@@ -140,6 +141,37 @@ export async function action({ request, params }: DataFunctionArgs) {
 
 	if (!submission.value) {
 		return json({ status: 'error', submission } as const, { status: 400 })
+	}
+
+	const { title, content, imageUpdates = [], newImages = [] } = submission.value
+
+	await prisma.note.update({
+		select: { id: true },
+		where: { id: params.noteId },
+		data: { title, content },
+	})
+
+	await prisma.noteImage.deleteMany({
+		where: {
+			id: { notIn: imageUpdates.map(i => i.id) },
+			noteId: params.noteId,
+		},
+	})
+
+	for (const updates of imageUpdates) {
+		await prisma.noteImage.update({
+			select: { id: true },
+			where: { id: updates.id },
+			// bust the cache and update image id
+			data: { ...updates, id: updates.blob ? cuid() : updates.id },
+		})
+	}
+
+	for (const newImage of newImages) {
+		await prisma.noteImage.create({
+			select: { id: true },
+			data: { ...newImage, noteId: params.noteId },
+		})
 	}
 
 	return redirect(`/users/${params.username}/notes/${params.noteId}`)
