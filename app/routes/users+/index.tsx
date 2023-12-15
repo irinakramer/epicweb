@@ -27,8 +27,8 @@ export async function loader({ request }: DataFunctionArgs) {
 		SELECT User.id, User.username, User.name, UserImage.id as imageId
 		FROM User
 		LEFT JOIN UserImage ON UserImage.userId = User.id
-		WHERE username LIKE ${like}
-		OR name LIKE ${like}
+		WHERE User.username LIKE ${like}
+		OR User.name LIKE ${like}
 		LIMIT 50
 	`
 
