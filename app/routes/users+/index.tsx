@@ -11,6 +11,7 @@ const UserSearchResultSchema = z.object({
 	id: z.string(),
 	username: z.string(),
 	name: z.string().nullable(),
+	imageId: z.string().nullable(),
 })
 
 const UserSearchResultsSchema = z.array(UserSearchResultSchema)
@@ -23,21 +24,20 @@ export async function loader({ request }: DataFunctionArgs) {
 
 	const like = `%${searchTerm ?? ''}%`
 	const rawUsers = await prisma.$queryRaw`
-		SELECT id, username, name
+		SELECT User.id, User.username, User.name, UserImage.id as imageId
 		FROM User
+		LEFT JOIN UserImage ON UserImage.userId = User.id
 		WHERE username LIKE ${like}
 		OR name LIKE ${like}
 		LIMIT 50
 	`
 
 	const result = UserSearchResultsSchema.safeParse(rawUsers)
-
 	if (!result.success) {
 		return json({ status: 'error', error: result.error.message } as const, {
 			status: 400,
 		})
 	}
-
 	return json({ status: 'idle', users: result.data } as const)
 }
 
@@ -75,8 +75,7 @@ export default function UsersRoute() {
 									>
 										<img
 											alt={user.name ?? user.username}
-											// @ts-expect-error here.
-											src={getUserImgSrc(user.image?.id)}
+											src={getUserImgSrc(user.imageId)}
 											className="h-16 w-16 rounded-full"
 										/>
 										{user.name ? (
