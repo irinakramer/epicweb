@@ -36,7 +36,10 @@ model Note {
 
   images NoteImage[]
 
+  // non-unique foreign key
   @@index([ownerId])
+  // This helps our order by in the user search a LOT
+  @@index([ownerId, updatedAt])
 }
 
 model NoteImage {
@@ -51,6 +54,7 @@ model NoteImage {
   note   Note   @relation(fields: [noteId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   noteId String
 
+  // non-unique foreign key
   @@index([noteId])
 }
 
