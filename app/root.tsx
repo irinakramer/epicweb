@@ -21,8 +21,10 @@ import {
 	useMatches,
 	type MetaFunction,
 } from '@remix-run/react'
+import { useEffect } from 'react'
 import { AuthenticityTokenProvider } from 'remix-utils/csrf/react'
 import { HoneypotProvider } from 'remix-utils/honeypot/react'
+import { Toaster, toast as showToast } from 'sonner'
 import { z } from 'zod'
 import faviconAssetUrl from './assets/favicon.svg'
 import { GeneralErrorBoundary } from './components/error-boundary.tsx'
@@ -55,6 +57,7 @@ export async function loader({ request }: DataFunctionArgs) {
 		{
 			username: os.userInfo().username,
 			theme: getTheme(request),
+			toast: null,
 			ENV: getEnv(),
 			csrfToken,
 			honeyProps,
@@ -120,6 +123,7 @@ function Document({
 						__html: `window.ENV = ${JSON.stringify(env)}`,
 					}}
 				/>
+				<Toaster closeButton position="top-center" />
 				<ScrollRestoration />
 				<Scripts />
 				<LiveReload />
@@ -169,6 +173,7 @@ function App() {
 				</div>
 			</div>
 			<Spacer size="3xs" />
+			{data.toast ? <ShowToast toast={data.toast} /> : null}
 		</Document>
 	)
 }
@@ -238,6 +243,21 @@ function ThemeSwitch({ userPreference }: { userPreference?: Theme }) {
 			<ErrorList errors={form.errors} id={form.errorId} />
 		</fetcher.Form>
 	)
+}
+
+function ShowToast({ toast }: { toast: any }) {
+	const { id, type, title, description } = toast as {
+		id: string
+		type: 'success' | 'message'
+		title: string
+		description: string
+	}
+	useEffect(() => {
+		setTimeout(() => {
+			showToast[type](title, { id, description })
+		}, 0)
+	}, [description, id, title, type])
+	return null
 }
 
 export const meta: MetaFunction = () => {
