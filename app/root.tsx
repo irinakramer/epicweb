@@ -57,7 +57,6 @@ export async function loader({ request }: DataFunctionArgs) {
 	const cookie = request.headers.get('cookie')
 	const toastCookieSession = await toastSessionStorage.getSession(cookie)
 	const toast = toastCookieSession.get('toast')
-	toastCookieSession.unset('toast')
 	return json(
 		{
 			username: os.userInfo().username,
