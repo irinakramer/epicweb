@@ -7,6 +7,7 @@ import { Button } from '#app/components/ui/button.tsx'
 import { validateCSRF } from '#app/utils/csrf.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { getNoteImgSrc, invariantResponse } from '#app/utils/misc.tsx'
+import { toastSessionStorage } from '#app/utils/toast.server.ts'
 import { type loader as notesLoader } from './notes.tsx'
 
 export async function loader({ params }: DataFunctionArgs) {
@@ -36,7 +37,20 @@ export async function action({ request, params }: DataFunctionArgs) {
 	invariantResponse(intent === 'delete', 'Invalid intent')
 
 	await prisma.note.delete({ where: { id: params.noteId } })
-	return redirect(`/users/${params.username}/notes`)
+
+	const cookie = request.headers.get('cookie')
+	const toastCookieSession = await toastSessionStorage.getSession(cookie)
+	toastCookieSession.set('toast', {
+		type: 'success',
+		title: 'Note deleted',
+		description: 'Your note has been deleted',
+	})
+
+	return redirect(`/users/${params.username}/notes`, {
+		headers: {
+			'set-cookie': await toastSessionStorage.commitSession(toastCookieSession),
+		},
+	})
 }
 
 export default function NoteRoute() {
