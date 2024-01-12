@@ -38,7 +38,11 @@ import tailwindStylesheetUrl from './styles/tailwind.css'
 import { csrf } from './utils/csrf.server.ts'
 import { getEnv } from './utils/env.server.ts'
 import { honeypot } from './utils/honeypot.server.ts'
-import { combineHeaders, invariantResponse } from './utils/misc.tsx'
+import {
+	combineHeaders,
+	getUserImgSrc,
+	invariantResponse,
+} from './utils/misc.tsx'
 import { type Theme, getTheme, setTheme } from './utils/theme.server.ts'
 import { getToast, type Toast } from './utils/toast.server.ts'
 
@@ -140,6 +144,7 @@ function Document({
 function App() {
 	const data = useLoaderData<typeof loader>()
 	const theme = useTheme()
+	const user = null as any
 	const matches = useMatches()
 	const isOnSearchPage = matches.find(m => m.id === 'routes/users+/index')
 	return (
@@ -156,9 +161,29 @@ function App() {
 						</div>
 					)}
 					<div className="flex items-center gap-10">
-						<Button asChild variant="default" size="sm">
-							<Link to="/login">Log In</Link>
-						</Button>
+						{user ? (
+							<div className="flex items-center gap-2">
+								<Button asChild variant="secondary">
+									<Link
+										to={`/users/${user.username}`}
+										className="flex items-center gap-2"
+									>
+										<img
+											className="h-8 w-8 rounded-full object-cover"
+											alt={user.name ?? user.username}
+											src={getUserImgSrc(user.image?.id)}
+										/>
+										<span className="hidden text-body-sm font-bold sm:block">
+											{user.name ?? user.username}
+										</span>
+									</Link>
+								</Button>
+							</div>
+						) : (
+							<Button asChild variant="default" size="sm">
+								<Link to="/login">Log In</Link>
+							</Button>
+						)}
 					</div>
 				</nav>
 			</header>
