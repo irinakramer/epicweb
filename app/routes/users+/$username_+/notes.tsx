@@ -1,6 +1,7 @@
 import { json, type DataFunctionArgs } from '@remix-run/node'
 import { Link, NavLink, Outlet, useLoaderData } from '@remix-run/react'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
+import { Icon } from '#app/components/ui/icon.tsx'
 import { prisma } from '#app/utils/db.server.ts'
 import { cn, getUserImgSrc, invariantResponse } from '#app/utils/misc.tsx'
 
@@ -22,6 +23,7 @@ export async function loader({ params }: DataFunctionArgs) {
 
 export default function NotesRoute() {
 	const data = useLoaderData<typeof loader>()
+	const isOwner = true
 	const ownerDisplayName = data.owner.name ?? data.owner.username
 	const navLinkDefaultClassName =
 		'line-clamp-2 block rounded-l-full py-2 pl-8 pr-6 text-base lg:text-xl'
@@ -44,6 +46,18 @@ export default function NotesRoute() {
 							</h1>
 						</Link>
 						<ul className="overflow-y-auto overflow-x-hidden pb-12">
+							{isOwner ? (
+								<li className="p-1 pr-0">
+									<NavLink
+										to="new"
+										className={({ isActive }) =>
+											cn(navLinkDefaultClassName, isActive && 'bg-accent')
+										}
+									>
+										<Icon name="plus">New Note</Icon>
+									</NavLink>
+								</li>
+							) : null}
 							{data.owner.notes.map(note => (
 								<li key={note.id} className="p-1 pr-0">
 									<NavLink
