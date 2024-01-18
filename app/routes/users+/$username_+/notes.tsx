@@ -4,10 +4,12 @@ import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { prisma } from '#app/utils/db.server.ts'
 import { cn, getUserImgSrc, invariantResponse } from '#app/utils/misc.tsx'
+import { useOptionalUser } from '#app/utils/user.ts'
 
 export async function loader({ params }: DataFunctionArgs) {
 	const owner = await prisma.user.findFirst({
 		select: {
+			id: true,
 			name: true,
 			username: true,
 			image: { select: { id: true } },
@@ -23,7 +25,8 @@ export async function loader({ params }: DataFunctionArgs) {
 
 export default function NotesRoute() {
 	const data = useLoaderData<typeof loader>()
-	const isOwner = true
+	const user = useOptionalUser()
+	const isOwner = user?.id === data.owner.id
 	const ownerDisplayName = data.owner.name ?? data.owner.username
 	const navLinkDefaultClassName =
 		'line-clamp-2 block rounded-l-full py-2 pl-8 pr-6 text-base lg:text-xl'

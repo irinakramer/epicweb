@@ -6,10 +6,12 @@ import { Button } from '#app/components/ui/button.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { prisma } from '#app/utils/db.server.ts'
 import { getUserImgSrc, invariantResponse } from '#app/utils/misc.tsx'
+import { useOptionalUser } from '#app/utils/user.ts'
 
 export async function loader({ params }: DataFunctionArgs) {
 	const user = await prisma.user.findUnique({
 		select: {
+			id: true,
 			name: true,
 			username: true,
 			createdAt: true,
@@ -30,7 +32,8 @@ export default function ProfileRoute() {
 	const data = useLoaderData<typeof loader>()
 	const user = data.user
 	const userDisplayName = user.name ?? user.username
-	const isLoggedInUser = false
+	const loggedInUser = useOptionalUser()
+	const isLoggedInUser = data.user.id === loggedInUser?.id
 
 	return (
 		<div className="container mb-48 mt-36 flex flex-col items-center justify-center">
