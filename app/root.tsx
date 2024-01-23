@@ -4,6 +4,7 @@ import { parse } from '@conform-to/zod'
 import { cssBundleHref } from '@remix-run/css-bundle'
 import {
 	json,
+	redirect,
 	type DataFunctionArgs,
 	type LinksFunction,
 } from '@remix-run/node'
@@ -77,6 +78,15 @@ export async function loader({ request }: DataFunctionArgs) {
 				where: { id: userId },
 		  })
 		: null
+	if (userId && !user) {
+		// something weird happened... The user is authenticated but we can't find
+		// them in the database. Maybe they were deleted? Let's log them out.
+		throw redirect('/', {
+			headers: {
+				'set-cookie': await sessionStorage.destroySession(cookieSession),
+			},
+		})
+	}
 	return json(
 		{
 			username: os.userInfo().username,
