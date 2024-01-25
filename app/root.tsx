@@ -4,12 +4,10 @@ import { parse } from '@conform-to/zod'
 import { cssBundleHref } from '@remix-run/css-bundle'
 import {
 	json,
-	redirect,
 	type DataFunctionArgs,
 	type LinksFunction,
 } from '@remix-run/node'
 import {
-	Form,
 	Link,
 	Links,
 	LiveReload,
@@ -20,12 +18,10 @@ import {
 	useFetcher,
 	useFetchers,
 	useLoaderData,
-	useLocation,
 	useMatches,
-	useSubmit,
 	type MetaFunction,
 } from '@remix-run/react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect } from 'react'
 import { AuthenticityTokenProvider } from 'remix-utils/csrf/react'
 import { HoneypotProvider } from 'remix-utils/honeypot/react'
 import { Toaster, toast as showToast } from 'sonner'
@@ -35,20 +31,11 @@ import { GeneralErrorBoundary } from './components/error-boundary.tsx'
 import { ErrorList } from './components/forms.tsx'
 import { SearchBar } from './components/search-bar.tsx'
 import { Spacer } from './components/spacer.tsx'
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from './components/ui/alert-dialog.tsx'
 import { Button } from './components/ui/button.tsx'
 import { Icon } from './components/ui/icon.tsx'
 import fontStylestylesheetUrl from './styles/font.css'
 import tailwindStylesheetUrl from './styles/tailwind.css'
+import { getUserId } from './utils/auth.server.ts'
 import { csrf } from './utils/csrf.server.ts'
 import { prisma } from './utils/db.server.ts'
 import { getEnv } from './utils/env.server.ts'
@@ -58,7 +45,6 @@ import {
 	getUserImgSrc,
 	invariantResponse,
 } from './utils/misc.tsx'
-import { sessionStorage } from './utils/session.server.ts'
 import { type Theme, getTheme, setTheme } from './utils/theme.server.ts'
 import { getToast, type Toast } from './utils/toast.server.ts'
 import { useOptionalUser } from './utils/user.ts'
@@ -76,12 +62,9 @@ export async function loader({ request }: DataFunctionArgs) {
 	const [csrfToken, csrfCookieHeader] = await csrf.commitToken(request)
 	const honeyProps = honeypot.getInputProps()
 	const { toast, headers: toastHeaders } = await getToast(request)
-	const cookieSession = await sessionStorage.getSession(
-		request.headers.get('cookie'),
-	)
-	const userId = cookieSession.get('userId')
+	const userId = await getUserId(request)
 	const user = userId
-		? await prisma.user.findUnique({
+		? await prisma.user.findUniqueOrThrow({
 				select: {
 					id: true,
 					name: true,
@@ -91,15 +74,7 @@ export async function loader({ request }: DataFunctionArgs) {
 				where: { id: userId },
 		  })
 		: null
-	if (userId && !user) {
-		// something weird happened... The user is authenticated but we can't find
-		// them in the database. Maybe they were deleted? Let's log them out.
-		throw redirect('/', {
-			headers: {
-				'set-cookie': await sessionStorage.destroySession(cookieSession),
-			},
-		})
-	}
+
 	return json(
 		{
 			username: os.userInfo().username,
@@ -154,12 +129,10 @@ function Document({
 	children,
 	theme,
 	env,
-	isLoggedIn = false,
 }: {
 	children: React.ReactNode
 	theme?: Theme
 	env?: Record<string, string>
-	isLoggedIn?: boolean
 }) {
 	return (
 		<html lang="en" className={`${theme} h-full overflow-x-hidden`}>
@@ -176,7 +149,6 @@ function Document({
 						__html: `window.ENV = ${JSON.stringify(env)}`,
 					}}
 				/>
-				{isLoggedIn ? <LogoutTimer /> : null}
 				<Toaster closeButton position="top-center" />
 				<ScrollRestoration />
 				<Scripts />
@@ -193,7 +165,7 @@ function App() {
 	const matches = useMatches()
 	const isOnSearchPage = matches.find(m => m.id === 'routes/users+/index')
 	return (
-		<Document isLoggedIn={Boolean(user)} theme={theme} env={data.ENV}>
+		<Document theme={theme} env={data.ENV}>
 			<header className="container px-6 py-4 sm:px-8 sm:py-6">
 				<nav className="flex items-center justify-between gap-4 sm:gap-6">
 					<Link to="/">
@@ -317,70 +289,6 @@ function ThemeSwitch({ userPreference }: { userPreference?: Theme }) {
 			</div>
 			<ErrorList errors={form.errors} id={form.errorId} />
 		</fetcher.Form>
-	)
-}
-
-function LogoutTimer() {
-	const [status, setStatus] = useState<'idle' | 'show-modal'>('idle')
-	const location = useLocation()
-	const submit = useSubmit()
-
-	const logoutTime = 5000
-	const modalTime = 2000
-
-	// const logoutTime = 1000 * 60 * 60 * 24;
-
-	const modalTimer = useRef<ReturnType<typeof setTimeout>>()
-	const logoutTimer = useRef<ReturnType<typeof setTimeout>>()
-
-	const logout = useCallback(() => {
-		submit(null, { method: 'POST', action: '/logout' })
-	}, [submit])
-
-	const cleanupTimers = useCallback(() => {
-		clearTimeout(modalTimer.current)
-		clearTimeout(logoutTimer.current)
-	}, [])
-
-	const resetTimers = useCallback(() => {
-		cleanupTimers()
-		modalTimer.current = setTimeout(() => {
-			setStatus('show-modal')
-		}, modalTime)
-		logoutTimer.current = setTimeout(logout, logoutTime)
-	}, [cleanupTimers, logout, logoutTime, modalTime])
-
-	useEffect(() => resetTimers(), [resetTimers, location.key])
-	useEffect(() => cleanupTimers, [cleanupTimers])
-
-	function closeModal() {
-		setStatus('idle')
-		resetTimers()
-	}
-
-	return (
-		<AlertDialog
-			aria-label="Pending Logout Notification"
-			open={status === 'show-modal'}
-		>
-			<AlertDialogContent>
-				<AlertDialogHeader>
-					<AlertDialogTitle>Are you still there?</AlertDialogTitle>
-				</AlertDialogHeader>
-				<AlertDialogDescription>
-					You are going to be logged out due to inactivity. Close this modal to
-					stay logged in.
-				</AlertDialogDescription>
-				<AlertDialogFooter className="flex items-end gap-8">
-					<AlertDialogCancel onClick={closeModal}>
-						Remain Logged In
-					</AlertDialogCancel>
-					<Form method="POST" action="/logout">
-						<AlertDialogAction type="submit">Logout</AlertDialogAction>
-					</Form>
-				</AlertDialogFooter>
-			</AlertDialogContent>
-		</AlertDialog>
 	)
 }
 

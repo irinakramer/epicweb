@@ -14,9 +14,12 @@ import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { CheckboxField, ErrorList, Field } from '#app/components/forms.tsx'
 import { Spacer } from '#app/components/spacer.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
-import { bcrypt, getSessionExpirationDate } from '#app/utils/auth.server.ts'
+import {
+	login,
+	getSessionExpirationDate,
+	userIdKey,
+} from '#app/utils/auth.server.ts'
 import { validateCSRF } from '#app/utils/csrf.server.ts'
-import { prisma } from '#app/utils/db.server.ts'
 import { checkHoneypot } from '#app/utils/honeypot.server.ts'
 import { useIsPending } from '#app/utils/misc.tsx'
 import { sessionStorage } from '#app/utils/session.server.ts'
@@ -37,11 +40,8 @@ export async function action({ request }: DataFunctionArgs) {
 			LoginFormSchema.transform(async (data, ctx) => {
 				if (intent !== 'submit') return { ...data, user: null }
 
-				const userWithPassword = await prisma.user.findUnique({
-					select: { id: true, password: { select: { hash: true } } },
-					where: { username: data.username },
-				})
-				if (!userWithPassword || !userWithPassword.password) {
+				const user = await login(data)
+				if (!user) {
 					ctx.addIssue({
 						code: 'custom',
 						message: 'Invalid username or password',
@@ -49,20 +49,7 @@ export async function action({ request }: DataFunctionArgs) {
 					return z.NEVER
 				}
 
-				const isValid = await bcrypt.compare(
-					data.password,
-					userWithPassword.password.hash,
-				)
-
-				if (!isValid) {
-					ctx.addIssue({
-						code: 'custom',
-						message: 'Invalid username or password',
-					})
-					return z.NEVER
-				}
-
-				return { ...data, user: { id: userWithPassword.id } }
+				return { ...data, user }
 			}),
 		async: true,
 	})
@@ -84,7 +71,7 @@ export async function action({ request }: DataFunctionArgs) {
 	const cookieSession = await sessionStorage.getSession(
 		request.headers.get('cookie'),
 	)
-	cookieSession.set('userId', user.id)
+	cookieSession.set(userIdKey, user.id)
 
 	return redirect('/', {
 		headers: {
